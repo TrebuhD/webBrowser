@@ -16,6 +16,9 @@ class WebBrowser(gtk.Window):
         self.connect("destroy", gtk.main_quit)
         self.set_size_request(1024, 768)
 
+        self.notebook = gtk.Notebook()
+        self.notebook.set_tab_pos(gtk.POS_TOP)
+
         self.initialize_components()
         self.show_all()
 
@@ -27,16 +30,12 @@ class WebBrowser(gtk.Window):
         # The browser engine container:
         webview = webkit.WebView()
 
-        # Scrollable box for the WebView:
-        scroller = gtk.ScrolledWindow()
-        scroller.add(webview)
-
         # A toolbar with all the necessary controls:
         toolbar = gtk.Toolbar()
         toolbar.set_style(gtk.TOOLBAR_ICONS)
 
         # Buttons and stuff:
-        # newTb = gtk.ToolButton(gtk.STOCK_NEW)
+        # newtab_button = gtk.ToolButton(gtk.STOCK_NEW)
         clear_button = gtk.ToolButton(gtk.STOCK_CLEAR)
         refresh_button = gtk.ToolButton(gtk.STOCK_REFRESH)
         go_button = gtk.ToolButton(gtk.STOCK_GO_FORWARD)
@@ -54,18 +53,20 @@ class WebBrowser(gtk.Window):
         clear_button.connect('clicked', Toolbox.clear_text, addressbar)
         back_button.connect('clicked', Toolbox.go_back, webview)
         refresh_button.connect('clicked', Toolbox.refresh, webview)
+        # newtab_button.connect('clicked', )
 
         # Assemble the toolbar:
-        # toolbar.insert(newTb, 0)
         toolbar.insert(back_button, 0)
         toolbar.insert(refresh_button, 1)
         toolbar.insert(addressbar_item, 2)
         toolbar.insert(clear_button, 3)
         toolbar.insert(go_button, 4)
+        # toolbar.insert(newtab_button, 5)
 
         # Put it all in a box:
         box.pack_start(toolbar, False, False, 0)
-        box.pack_start(scroller)
+        box.pack_start(self.notebook)
+        self.notebook.show()
 
     def on_key_press(self, widget, event, webview):
         # If enter was pressed:
@@ -85,7 +86,45 @@ class WebBrowser(gtk.Window):
             address = Toolbox.add_http_prefix(address)
             addressbar.set_text(address)
             print("Opening: " + address)
+        # if self.notebook.get_n_pages() == 0:
+        self.append_page(web_view)
         web_view.open(address)
+
+    def append_page(self, web_view):
+        # Scrollable window acting as a container for WebView:
+        scroller = gtk.ScrolledWindow()
+        scroller.add(web_view)
+        scroller.show_all()
+
+        # Create the components for a tab header:
+        header = gtk.HBox()
+        title_label = gtk.Label()
+        web_view.connect("title-changed", Toolbox.changetitle, title_label)
+        image = gtk.Image()
+        image.set_from_stock(gtk.STOCK_CLOSE, gtk.ICON_SIZE_MENU)
+        close_button = gtk.Button()
+        close_button.set_image(image)
+        close_button.set_relief(gtk.RELIEF_NONE)
+
+        close_button.connect("clicked", self.remove_page, scroller)
+
+        header.pack_start(title_label,
+                          expand=True, fill=True, padding=0)
+        header.pack_end(close_button,
+                        expand=False, fill=False, padding=0)
+        header.show_all()
+
+        self.notebook.append_page(scroller, header)
+
+    def remove_page(self, widget, child):
+        pagenum = self.notebook.page_num(child)
+        if pagenum != -1:
+            self.notebook.remove_page(pagenum)
+            child.destroy()
+            if self.notebook.get_n_pages() == 1:
+                self.set_property('show-tabs', False)
+        # Refresh the widget
+        # self.notebook.queue_draw_area(0, 0, -1, -1)
 
 if __name__ == "__main__":
     WebBrowser()

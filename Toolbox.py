@@ -21,4 +21,9 @@ class Toolbox(object):
     def clear_text(widget, addressbar):
         addressbar.set_text("")
 
+    @staticmethod
+    def changetitle(webview, frame, title, label):
+            label.set_text(title)
+
+
 
