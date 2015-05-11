@@ -1,53 +1,96 @@
-# coding=utf-8
 __author__ = 'hubert'
 
 import gtk
-import gtk.gdk
 import webkit
 
 
-def go(widget):
-    add = addressbar.get_text()
-    if not add.startswith("http://"):
-        add = "http://" + add
-    addressbar.set_text(add)
-    web_view.open(add)
+class WebBrowser(gtk.Window):
+    def __init__(self):
+        super(WebBrowser, self).__init__()
 
-def on_key_press(widget, event):
-    # If enter was pressed
-    if event.keyval == 65293:
-        print("enter key pressed")
-        go(widget)
+        self.set_title("Web Browser 9000")
+        self.modify_bg(gtk.STATE_NORMAL, gtk.gdk.Color(16800, 16800, 16920))
+        self.set_position(gtk.WIN_POS_CENTER)
+        self.connect("destroy", gtk.main_quit)
+        self.set_size_request(1024, 768)
 
-# The main program window:
-win = gtk.Window()
-win.connect('destroy', lambda w: gtk.main_quit())
+        self.initialize_components()
+        self.show_all()
 
-# The big box to hold all them lil' boxes:
-box = gtk.VBox()
-win.add(box)
+    def initialize_components(self):
+        # The big box to hold them all:
+        box = gtk.VBox(False, 2)
+        self.add(box)
 
-# A wee box for all the necessary controls:
-top_bar_box = gtk.HBox()
-box.pack_start(top_bar_box, False)
+        # The browser engine container:
+        webview = webkit.WebView()
 
-addressbar = gtk.Entry()
-addressbar.connect('key_press_event', on_key_press)
-top_bar_box.pack_start(addressbar)
+        # Scrollable box for the WebView:
+        scroller = gtk.ScrolledWindow()
+        scroller.add(webview)
 
-gobutton = gtk.Button("GO")
-top_bar_box.pack_end(gobutton, False)
-gobutton.connect('clicked', go)
+        # A toolbar with all the necessary controls:
+        toolbar = gtk.Toolbar()
+        toolbar.set_style(gtk.TOOLBAR_ICONS)
 
-# The browser engine container:
-web_view = webkit.WebView()
+        # Buttons and stuff:
+        # newTb = gtk.ToolButton(gtk.STOCK_NEW)
+        clearTb = gtk.ToolButton(gtk.STOCK_CLEAR)
+        refreshTb = gtk.ToolButton(gtk.STOCK_REFRESH)
+        goTb = gtk.ToolButton(gtk.STOCK_GO_FORWARD)
+        goBackTb = gtk.ToolButton(gtk.STOCK_GO_BACK)
 
-# Scrollable box for the WebView:
-scroller = gtk.ScrolledWindow()
-box.pack_start(scroller)
-scroller.add(web_view)
+        # The address bar needs to be split because Toolbar only accepts ToolItems.
+        addressItem = gtk.ToolItem()
+        addressbar = gtk.Entry()
+        addressbar.connect('key_press_event', self.on_key_press, webview)
+        addressbar.set_width_chars(100)
+        addressItem.add(addressbar)
 
-# Make the window not tiny:
-win.set_default_size(1024, 768)
-win.show_all()
-gtk.main()
+        # Let's give the buttons a purpose:
+        goTb.connect('clicked', self.go, webview, addressbar)
+        clearTb.connect('clicked', self.clear_text, addressbar)
+        goBackTb.connect('clicked', self.go_back, webview)
+        refreshTb.connect('clicked', self.refresh, webview)
+
+        # Assemble the toolbar:
+        # toolbar.insert(newTb, 0)
+        toolbar.insert(goBackTb, 0)
+        toolbar.insert(refreshTb, 1)
+        toolbar.insert(addressItem, 2)
+        toolbar.insert(clearTb, 3)
+        toolbar.insert(goTb, 4)
+
+        # Put it all in a box:
+        box.pack_start(toolbar, False, False, 0)
+        box.pack_start(scroller)
+
+    def on_key_press(self, widget, event, webview):
+        # If enter was pressed:
+        if event.keyval == 65293:
+            self.go(widget, webview)
+
+    def clear_text(self, widget, addressbar):
+        addressbar.set_text("")
+
+    def go(self, widget, web_view, addressbar=None):
+        # If called from address bar by pressing enter:
+        if hasattr(widget, 'get_text'):
+            address = widget.get_text()
+        # If the user clicked a button:
+        else:
+            address = addressbar.get_text()
+        if not address.startswith("http://"):
+            address = "http://" + address
+            print("Opening: " + address)
+            web_view.open(address)
+
+    def go_back(self, widget, web_view):
+        web_view.go_back()
+
+    def refresh(self, widget, web_view):
+        web_view.reload()
+
+if __name__ == "__main__":
+    WebBrowser()
+    gtk.main()
