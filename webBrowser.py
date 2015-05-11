@@ -70,26 +70,39 @@ class WebBrowser(gtk.Window):
         if event.keyval == 65293:
             self.go(widget, webview)
 
-    def clear_text(self, widget, addressbar):
-        addressbar.set_text("")
-
     def go(self, widget, web_view, addressbar=None):
         # If called from address bar by pressing enter:
         if hasattr(widget, 'get_text'):
             address = widget.get_text()
+            address = self.add_http_prefix(address)
+            widget.set_text(address)
+            print("Opening: " + address)
         # If the user clicked a button:
         else:
             address = addressbar.get_text()
-        if not address.startswith("http://"):
-            address = "http://" + address
+            address = self.add_http_prefix(address)
+            addressbar.set_text(address)
             print("Opening: " + address)
-            web_view.open(address)
+        web_view.open(address)
 
-    def go_back(self, widget, web_view):
+    @staticmethod
+    def add_http_prefix(addr):
+        if not addr.startswith("http://"):
+            return "http://" + addr
+        else:
+            return addr
+
+    @staticmethod
+    def go_back(widget, web_view):
         web_view.go_back()
 
-    def refresh(self, widget, web_view):
+    @staticmethod
+    def refresh(widget, web_view):
         web_view.reload()
+
+    @staticmethod
+    def clear_text(widget, addressbar):
+        addressbar.set_text("")
 
 if __name__ == "__main__":
     WebBrowser()
